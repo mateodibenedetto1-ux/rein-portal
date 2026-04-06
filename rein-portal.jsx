@@ -1501,33 +1501,46 @@ function EODs({ eods }) {
 
 // ── GLOBAL FILTER BAR ────────────────────────────────────────────────────────
 function GlobalFilterBar({ ventas, gMes, setGMes, gPrograma, setGPrograma, onSync, syncing }) {
-  const allMeses    = getMeses(ventas, "fechaCierre");
-  const allProgramas= [...new Set(ventas.map(v=>v.programa).filter(Boolean))].sort();
-  const active      = gMes!=="TODOS"||gPrograma!=="TODOS";
-  const Btn = ({v,cur,set,color=C.green,label})=>(
-    <button onClick={()=>set(v)} style={{ fontFamily:C.mono,fontSize:7,letterSpacing:"0.07em",cursor:"pointer",padding:"3px 9px",background:cur===v?color:"transparent",color:cur===v?C.void:C.grey,border:`1px solid ${cur===v?color:C.border}`,transition:"all 0.1s",whiteSpace:"nowrap" }}>
-      {label||v}
-    </button>
-  );
+  const allMeses     = getMeses(ventas, "fechaCierre");
+  const allProgramas = [...new Set(ventas.map(v=>v.programa).filter(Boolean))].sort();
+  const active       = gMes!=="TODOS" || gPrograma!=="TODOS";
+
+  const sel = { fontFamily:C.mono, fontSize:9, background:C.surface, color:C.white, border:`1px solid ${C.border}`, padding:"5px 10px", cursor:"pointer", outline:"none", letterSpacing:"0.06em", minWidth:140 };
+
   return (
-    <div style={{ position:"sticky",top:0,zIndex:50,background:C.bg,borderBottom:`1px solid ${C.border}`,padding:"8px 40px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap" }}>
-      <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap" }}>
-        <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.14em",marginRight:2 }}>MES</span>
-        <Btn v="TODOS" cur={gMes} set={setGMes} label="TODOS"/>
-        {allMeses.map(m=><Btn key={m} v={m} cur={gMes} set={setGMes} label={monthDisplay(m)}/>)}
+    <div style={{ position:"sticky",top:0,zIndex:50,background:C.bg,borderBottom:`1px solid ${C.border}`,padding:"0 40px",display:"flex",alignItems:"center",gap:0,height:44 }}>
+
+      {/* MES */}
+      <div style={{ display:"flex",alignItems:"center",gap:10,paddingRight:20,borderRight:`1px solid ${C.border}`,height:"100%" }}>
+        <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.16em",whiteSpace:"nowrap" }}>MES</span>
+        <select value={gMes} onChange={e=>setGMes(e.target.value)} style={sel}>
+          <option value="TODOS">Todos los meses</option>
+          {allMeses.map(m=><option key={m} value={m}>{monthDisplay(m)}</option>)}
+        </select>
       </div>
-      <div style={{ width:1,height:16,background:C.border,flexShrink:0 }}/>
-      <div style={{ display:"flex",alignItems:"center",gap:5,flexWrap:"wrap" }}>
-        <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.14em",marginRight:2 }}>PROGRAMA</span>
-        <Btn v="TODOS" cur={gPrograma} set={setGPrograma} color={C.blue} label="TODOS"/>
-        {allProgramas.map(p=><Btn key={p} v={p} cur={gPrograma} set={setGPrograma} color={C.blue}/>)}
+
+      {/* PROGRAMA */}
+      <div style={{ display:"flex",alignItems:"center",gap:10,paddingLeft:20,paddingRight:20,borderRight:`1px solid ${C.border}`,height:"100%" }}>
+        <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.16em",whiteSpace:"nowrap" }}>PROGRAMA</span>
+        <select value={gPrograma} onChange={e=>setGPrograma(e.target.value)} style={sel}>
+          <option value="TODOS">Todos los programas</option>
+          {allProgramas.map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
       </div>
-      {active&&(
-        <button onClick={()=>{setGMes("TODOS");setGPrograma("TODOS");}} style={{ fontFamily:C.mono,fontSize:7,cursor:"pointer",padding:"3px 10px",background:C.redDim,color:C.red,border:`1px solid ${C.red}40` }}>✕ LIMPIAR</button>
+
+      {/* Filtro activo pill */}
+      {active && (
+        <div style={{ display:"flex",alignItems:"center",gap:8,paddingLeft:20 }}>
+          {gMes!=="TODOS" && <span style={{ fontFamily:C.mono,fontSize:7,background:C.greenDim,color:C.green,border:`1px solid ${C.greenMid}`,padding:"3px 10px",letterSpacing:"0.08em" }}>{monthDisplay(gMes)} ×</span>}
+          {gPrograma!=="TODOS" && <span style={{ fontFamily:C.mono,fontSize:7,background:C.greenDim,color:C.green,border:`1px solid ${C.greenMid}`,padding:"3px 10px",letterSpacing:"0.08em" }}>{gPrograma} ×</span>}
+          <button onClick={()=>{setGMes("TODOS");setGPrograma("TODOS");}} style={{ fontFamily:C.mono,fontSize:7,cursor:"pointer",padding:"3px 10px",background:"transparent",color:C.red,border:`1px solid ${C.red}40`,letterSpacing:"0.08em" }}>LIMPIAR</button>
+        </div>
       )}
-      <div style={{ marginLeft:"auto",display:"flex",gap:6,alignItems:"center" }}>
-        {syncing&&<span style={{ fontFamily:C.mono,fontSize:7,color:C.amber,letterSpacing:"0.1em",animation:"blink 1s infinite" }}>SYNCING...</span>}
-        <button onClick={onSync} style={{ fontFamily:C.mono,fontSize:7,cursor:"pointer",padding:"4px 11px",background:"transparent",color:C.grey,border:`1px solid ${C.border}` }}>↻ SYNC</button>
+
+      {/* Sync */}
+      <div style={{ marginLeft:"auto",display:"flex",gap:8,alignItems:"center" }}>
+        {syncing && <span style={{ fontFamily:C.mono,fontSize:7,color:C.amber,letterSpacing:"0.1em",animation:"blink 1s infinite" }}>SYNCING...</span>}
+        <button onClick={onSync} style={{ fontFamily:C.mono,fontSize:7,cursor:"pointer",padding:"5px 14px",background:"transparent",color:C.grey,border:`1px solid ${C.border}`,letterSpacing:"0.1em" }}>↻ SYNC</button>
       </div>
     </div>
   );
