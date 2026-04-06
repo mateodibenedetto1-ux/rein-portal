@@ -7,28 +7,34 @@ const C = {
   // Verde principal — paleta (RE)IN
   green: "#5A6E54",     greenDim: "#5A6E5420", greenMid: "#5A6E5445",
   greenLight: "#A3AE99",
-  // Funcionales — muted para mantener la estética
-  red: "#8B3A3A",       redDim: "#8B3A3A20",
-  amber: "#8B6914",     amberDim: "#8B691420",
-  blue: "#2A5C7A",      blueDim: "#2A5C7A20",
-  purple: "#5A4E78",    purpleDim: "#5A4E7820",
+  // Funcionales — con más presencia sobre fondo oscuro
+  red: "#D94F4F",       redDim: "#D94F4F25",
+  amber: "#C49A1A",     amberDim: "#C49A1A25",
+  blue: "#4A8FAB",      blueDim: "#4A8FAB25",
+  purple: "#8B72B8",    purpleDim: "#8B72B825",
   // Texto
   white: "#FAFAFA", grey: "#9FA59C", greyMid: "#212724", textDim: "#5A6E54",
   mono: "'Space Mono','Courier New',monospace",
 };
 
 // ── AIRTABLE CREDENTIALS ─────────────────────────────────────────────────────
-const AIRTABLE_TOKEN = import.meta.env.VITE_AIRTABLE_TOKEN || "";
-const AIRTABLE_BASE  = import.meta.env.VITE_AIRTABLE_BASE  || "";
-// IDs de tablas (evita problemas con emojis en los nombres)
+// Base principal: clientes, tracker calls, gastos, EODs
+const AIRTABLE_TOKEN  = import.meta.env.VITE_AIRTABLE_TOKEN  || "";
+const AIRTABLE_BASE   = import.meta.env.VITE_AIRTABLE_BASE   || "";
+// Base secundaria: reporte de ventas, pagos, cuotas
+const AIRTABLE_TOKEN2 = import.meta.env.VITE_AIRTABLE_TOKEN2 || "";
+const AIRTABLE_BASE2  = import.meta.env.VITE_AIRTABLE_BASE2  || "";
+
 const T = {
-  clientes:      "tblaww5kxRLeij45c",
-  trackerCalls:  "tblAhVrRj1io2NCvT", // ☎️ Tracker de Calls — actualizar ID si cambia
-  ventas:        "tblH8tPFFvDtybQ27",
-  cuotas:        "tblnf0et1luKIbWPj",
-  pagos:         "tblE4XhYE8MJ48Ofi",
-  gastos:        "tblceQHzM9zkZxkv9",
-  eods:          "tblshbtRu0euUI96k",
+  // Base 1
+  clientes:     "tblaww5kxRLeij45c",
+  trackerCalls: "tblwy6EkOWYgWWVxV",
+  gastos:       "tblceQHzM9zkZxkv9",
+  eods:         "tblshbtRu0euUI96k",
+  // Base 2
+  ventas:       "tblH8tPFFvDtybQ27",
+  cuotas:       "tblnf0et1luKIbWPj",
+  pagos:        "tblE4XhYE8MJ48Ofi",
 };
 
 const OFFERS = ["TODOS", "B2C REIN", "B2B REIN", "B2B ADVISORY"];
@@ -1302,7 +1308,7 @@ function Finanzas({ ventas, gastos }) {
       <div style={{ marginBottom:28 }}>
         <div style={{ fontFamily:C.mono,fontSize:8,letterSpacing:"0.22em",color:C.amber,marginBottom:8 }}>FINANCIAL_DASHBOARD</div>
         <div style={{ fontFamily:C.mono,fontSize:32,fontWeight:700,color:C.white,letterSpacing:"-0.03em",lineHeight:1 }}>
-          FINANZAS<br/><span style={{ color:C.grey,fontSize:18 }}>OVERVIEW</span>
+          REPORTES<br/><span style={{ color:C.grey,fontSize:18 }}>DE_VENTAS</span>
         </div>
       </div>
       <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:2,marginBottom:2 }}>
@@ -1562,7 +1568,7 @@ const NAV = [
   { id:"clients",      label:"CLIENTES",     code:"02" },
   { id:"intelligence", label:"INTELIGENCIA", code:"03" },
   { id:"tracker",       label:"TRACKER CALLS", code:"04" },
-  { id:"finanzas",     label:"FINANZAS",     code:"05" },
+  { id:"finanzas",     label:"REP. VENTAS",  code:"05" },
   { id:"pagos",        label:"PAGOS/CUOTAS", code:"06" },
   { id:"eods",         label:"EODs",         code:"07" },
   { id:"content",      label:"CONTENIDO",    code:"08" },
@@ -1611,12 +1617,12 @@ export default function App() {
     setSyncing(true); setSyncErr("");
     try {
       const [pipelineR,ventasR,cuotasR,pagosR,gastosR,eodR] = await Promise.allSettled([
-        fetchAirtableTable(cfg.token, cfg.baseId, T.trackerCalls),
-        fetchAirtableTable(cfg.token, cfg.baseId, T.ventas),
-        fetchAirtableTable(cfg.token, cfg.baseId, T.cuotas),
-        fetchAirtableTable(cfg.token, cfg.baseId, T.pagos),
-        fetchAirtableTable(cfg.token, cfg.baseId, T.gastos),
-        fetchAirtableTable(cfg.token, cfg.baseId, T.eods),
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.trackerCalls),
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.ventas),
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.cuotas),
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.pagos),
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.gastos),
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.eods),
       ]);
       // Reporte de Venta es la fuente principal de clientes
       if(ventasR.status==="fulfilled"&&ventasR.value.length>0){
