@@ -261,27 +261,47 @@ function mapAirtableVentas(records) {
 
 function fmtDateShort(val) {
   if (!val) return "—";
-  // Airtable puede devolver ISO string o similar
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return val;
-  const dd = String(d.getDate()).padStart(2,"0");
-  const mm = String(d.getMonth()+1).padStart(2,"0");
-  const yy = String(d.getFullYear()).slice(2);
-  return `${dd}-${mm}-${yy}`;
+  // Airtable date fields: "2026-03-27" o "2026-03-27T00:00:00.000Z"
+  // Parsear sin conversión de timezone para evitar desfase de días
+  const match = String(val).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const [,y,m,d] = match;
+    return `${d}-${m}-${y.slice(2)}`;
+  }
+  return val;
+}
+
+function pick(f, ...keys) {
+  for (const k of keys) {
+    const v = f[k];
+    if (v !== undefined && v !== null && v !== "") {
+      if (Array.isArray(v)) return v[0] || "";           // linked record / lookup
+      if (typeof v === "object" && v.name) return v.name; // collaborator field
+      return v;
+    }
+  }
+  return "";
 }
 
 function mapAirtableTrackerCalls(records) {
   return records.map(r => {
     const f = r.fields;
+    // Probar nombres con y sin emoji — Airtable a veces incluye el emoji en el nombre del campo
+    const fechaAgenda  = pick(f, "Fecha de Agenda","📅 Fecha de Agenda","Fecha Agenda","fecha_agenda");
+    const fechaLlamada = pick(f, "Fecha de Llamada","📅 Fecha de Llamada","Fecha Llamada","Fecha de la Llamada","fecha_llamada");
+    const estado       = pick(f, "Estado","Status","estado");
+    const setter       = pick(f, "Setter","setter","Owner","Responsable");
+    const origen       = pick(f, "Origen","Source","origen");
+    const ig           = pick(f, "@instagram","Instagram","instagram");
     return {
       id:           r.id,
-      nombre:       f["Nombre"] || f["Name"] || "",
-      fechaAgenda:  f["Fecha de Agenda"] || f["Fecha Agenda"] || "",
-      fechaLlamada: f["Fecha de Llamada"] || f["Fecha Llamada"] || f["Fecha de la Llamada"] || "",
-      estado:       f["Estado"] || f["Status"] || "",
-      setter:       f["Setter"] || f["Owner"] || "",
-      origen:       f["Origen"] || f["Source"] || "",
-      instagram:    f["@instagram"] || f["Instagram"] || "",
+      nombre:       pick(f, "Nombre","Name","nombre"),
+      fechaAgenda,
+      fechaLlamada,
+      estado,
+      setter,
+      origen,
+      instagram:    ig.startsWith("@") ? ig.slice(1) : ig, // evitar doble @
     };
   });
 }
