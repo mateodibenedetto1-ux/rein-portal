@@ -1,4 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
+
+class ErrorBoundary extends Component {
+  constructor(p) { super(p); this.state = { err: null }; }
+  static getDerivedStateFromError(e) { return { err: e }; }
+  render() {
+    if (this.state.err) return (
+      <div style={{ fontFamily:"'Space Mono',monospace", padding:40, color:"#D94F4F", background:"#101010", minHeight:"100vh" }}>
+        <div style={{ fontSize:11, letterSpacing:"0.2em", marginBottom:12 }}>ERROR_DE_RENDER</div>
+        <div style={{ fontSize:13, marginBottom:8 }}>{String(this.state.err)}</div>
+        <button onClick={()=>this.setState({err:null})} style={{ marginTop:16, padding:"8px 20px", background:"#1C1C1C", color:"#FAFAFA", border:"1px solid #3D4D43", fontFamily:"inherit", fontSize:10, cursor:"pointer", letterSpacing:"0.1em" }}>
+          REINTENTAR
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 const C = {
   // Fondos — Negro REIN y variantes
@@ -289,25 +306,27 @@ function pick(f, ...keys) {
   return "";
 }
 
+function str(v) { return v == null ? "" : String(v); }
+
 function mapAirtableTrackerCalls(records) {
   return records.map(r => {
-    const f = r.fields;
-    const ig = pick(f, "📱 Instagram","Instagram","instagram","@instagram");
-    return {
-      id:           r.id,
-      nombre:       pick(f, "👤 Nombre","Nombre","Name"),
-      fechaAgenda:  pick(f, "📅 Fecha de Agenda","Fecha de Agenda","Fecha Agenda"),
-      agenda:       pick(f, "📍 Agenda","Agenda"),
-      leadScoring:  pick(f, "🤖 Lead Scoring","Lead Scoring"),
-      ingresos:     pick(f, "💰 Ingresos Mensuales","Ingresos Mensuales"),
-      meses:        pick(f, "📅 Meses","Meses"),
-      instagram:    ig.startsWith("@") ? ig.slice(1) : ig,
-      // campos que pueden existir en otra vista/tabla
-      fechaLlamada: pick(f, "📅 Fecha de Llamada","Fecha de Llamada","Fecha Llamada"),
-      estado:       pick(f, "Estado","Status"),
-      setter:       pick(f, "Setter","setter","Owner"),
-      origen:       pick(f, "Origen","Source","UTM ID","🔎 UTM ID"),
-    };
+    try {
+      const f = r.fields;
+      const ig = str(pick(f, "📱 Instagram","Instagram","instagram","@instagram"));
+      return {
+        id:           r.id,
+        nombre:       str(pick(f, "👤 Nombre","Nombre","Name")),
+        fechaAgenda:  str(pick(f, "📅 Fecha de Agenda","Fecha de Agenda","Fecha Agenda")),
+        agenda:       str(pick(f, "📍 Agenda","Agenda")),
+        leadScoring:  str(pick(f, "🤖 Lead Scoring","Lead Scoring")),
+        ingresos:     str(pick(f, "💰 Ingresos Mensuales","Ingresos Mensuales")),
+        meses:        str(pick(f, "📅 Meses","Meses")),
+        instagram:    ig.startsWith("@") ? ig.slice(1) : ig,
+      };
+    } catch(e) {
+      console.warn("Error mapeando registro TrackerCalls:", r.id, e);
+      return { id: r.id, nombre:"", fechaAgenda:"", agenda:"", leadScoring:"", ingresos:"", meses:"", instagram:"" };
+    }
   });
 }
 
@@ -1728,7 +1747,7 @@ export default function App() {
                 {section==="dashboard"    &&<Dashboard clients={fClients}/>}
                 {section==="clients"      &&<ClientsBase clients={fClients}/>}
                 {section==="intelligence" &&<Intelligence clients={fClients} intelligence={fIntel}/>}
-                {section==="tracker"      &&<TrackerCalls calls={fCalls}/>}
+                {section==="tracker"      &&<ErrorBoundary><TrackerCalls calls={fCalls}/></ErrorBoundary>}
                 {section==="finanzas"     &&<Finanzas ventas={fVentas} gastos={fGastos}/>}
                 {section==="pagos"        &&<PagosCuotas pagos={fPagos}/>}
                 {section==="eods"         &&<EODs eods={fEods}/>}
