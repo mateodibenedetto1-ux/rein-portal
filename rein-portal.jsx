@@ -259,22 +259,29 @@ function mapAirtableVentas(records) {
   });
 }
 
+function fmtDateShort(val) {
+  if (!val) return "—";
+  // Airtable puede devolver ISO string o similar
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return val;
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = String(d.getFullYear()).slice(2);
+  return `${dd}-${mm}-${yy}`;
+}
+
 function mapAirtableTrackerCalls(records) {
   return records.map(r => {
     const f = r.fields;
     return {
-      id:        r.id,
-      nombre:    f["Nombre"] || f["Name"] || "",
-      fecha:     f["Fecha"] || f["Fecha de Registro"] || f["Date"] || "",
-      whatsapp:  f["Whatsapp"] || f["WhatsApp"] || "",
-      instagram: f["@instagram"] || f["Instagram"] || "",
-      origen:    f["Origen"] || f["Source"] || "",
-      status:    f["Status"] || f["Estado"] || "Nuevo",
-      resultado: f["Resultado"] || f["Result"] || "",
-      closer:    f["Closer"] || f["Owner"] || f["Responsable"] || "",
-      programa:  f["Programa"] || f["Program"] || "",
-      notas:     f["Notas"] || f["Notes"] || "",
-      tipoCall:  f["Tipo de Call"] || f["Tipo"] || "",
+      id:           r.id,
+      nombre:       f["Nombre"] || f["Name"] || "",
+      fechaAgenda:  f["Fecha de Agenda"] || f["Fecha Agenda"] || "",
+      fechaLlamada: f["Fecha de Llamada"] || f["Fecha Llamada"] || f["Fecha de la Llamada"] || "",
+      estado:       f["Estado"] || f["Status"] || "",
+      setter:       f["Setter"] || f["Owner"] || "",
+      origen:       f["Origen"] || f["Source"] || "",
+      instagram:    f["@instagram"] || f["Instagram"] || "",
     };
   });
 }
@@ -1124,97 +1131,82 @@ const CALL_STATUS_COLORS = {
 };
 function TrackerCalls({ calls }) {
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("TODOS");
-  const [filterCloser, setFilterCloser] = useState("TODOS");
-  const [filterPrograma, setFilterPrograma] = useState("TODOS");
-  const [sortCol, setSortCol] = useState("fecha");
+  const [filterEstado, setFilterEstado] = useState("TODOS");
+  const [filterSetter, setFilterSetter] = useState("TODOS");
+  const [sortCol, setSortCol] = useState("fechaAgenda");
   const [sortDir, setSortDir] = useState("desc");
 
-  const allStatuses  = ["TODOS", ...new Set(calls.map(c=>c.status).filter(Boolean))];
-  const allClosers   = ["TODOS", ...new Set(calls.map(c=>c.closer).filter(Boolean))];
-  const allProgramas = ["TODOS", ...new Set(calls.map(c=>c.programa).filter(Boolean))];
+  const allEstados = ["TODOS", ...new Set(calls.map(c=>c.estado).filter(Boolean))];
+  const allSetters = ["TODOS", ...new Set(calls.map(c=>c.setter).filter(Boolean))];
 
   const filtered = calls.filter(c => {
     const q = search.toLowerCase();
-    const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.instagram.toLowerCase().includes(q) || c.closer.toLowerCase().includes(q);
-    const matchStatus  = filterStatus==="TODOS"  || c.status===filterStatus;
-    const matchCloser  = filterCloser==="TODOS"  || c.closer===filterCloser;
-    const matchPrograma= filterPrograma==="TODOS" || c.programa===filterPrograma;
-    return matchSearch && matchStatus && matchCloser && matchPrograma;
+    const matchSearch = !q || c.nombre.toLowerCase().includes(q) || c.instagram.toLowerCase().includes(q) || c.setter.toLowerCase().includes(q) || c.origen.toLowerCase().includes(q);
+    const matchEstado = filterEstado==="TODOS" || c.estado===filterEstado;
+    const matchSetter = filterSetter==="TODOS" || c.setter===filterSetter;
+    return matchSearch && matchEstado && matchSetter;
   }).sort((a,b) => {
-    let va = a[sortCol]||"", vb = b[sortCol]||"";
-    if(sortCol==="fecha") { va = va||"0"; vb = vb||"0"; }
+    const va = a[sortCol]||"", vb = b[sortCol]||"";
     const cmp = va < vb ? -1 : va > vb ? 1 : 0;
     return sortDir==="asc" ? cmp : -cmp;
   });
 
-  const totalShow   = calls.filter(c=>c.status==="Show Up").length;
-  const totalNoShow = calls.filter(c=>c.status==="No Show").length;
-  const totalCerrado= calls.filter(c=>c.status==="Cerrado").length;
-  const showRate    = calls.length ? Math.round((totalShow/calls.length)*100) : 0;
+  const totalCalls   = calls.length;
+  const byEstado     = allEstados.filter(e=>e!=="TODOS").map(e=>({ label:e, count:calls.filter(c=>c.estado===e).length }));
 
   const selStyle = { fontFamily:C.mono, fontSize:9, background:C.surface, color:C.white, border:`1px solid ${C.border}`, padding:"5px 10px", cursor:"pointer", outline:"none", letterSpacing:"0.06em" };
   const thStyle  = (col) => ({ fontFamily:C.mono, fontSize:7, color: sortCol===col ? C.green : C.grey, letterSpacing:"0.12em", padding:"10px 14px", textAlign:"left", cursor:"pointer", userSelect:"none", whiteSpace:"nowrap", borderBottom:`1px solid ${C.border}`, background:C.surface });
 
   function toggleSort(col) {
     if(sortCol===col) setSortDir(d=>d==="asc"?"desc":"asc");
-    else { setSortCol(col); setSortDir("asc"); }
+    else { setSortCol(col); setSortDir("desc"); }
   }
 
   return (
     <div>
       {/* Header */}
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:C.mono,fontSize:8,letterSpacing:"0.22em",color:C.blue,marginBottom:8 }}>TRACKER_CALLS</div>
+        <div style={{ fontFamily:C.mono,fontSize:8,letterSpacing:"0.22em",color:C.green,marginBottom:8 }}>TRACKER_CALLS</div>
         <div style={{ fontFamily:C.mono,fontSize:32,fontWeight:700,color:C.white,letterSpacing:"-0.03em",lineHeight:1 }}>
           TRACKER<br/><span style={{ color:C.grey,fontSize:18 }}>DE_CALLS</span>
         </div>
       </div>
 
       {/* KPIs */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:2,marginBottom:16 }}>
-        <KPI label="TOTAL_CALLS"   value={calls.length}   color={C.white}/>
-        <KPI label="SHOW_UP"       value={totalShow}      color={C.green}/>
-        <KPI label="NO_SHOW"       value={totalNoShow}    color={C.red}/>
-        <KPI label="CERRADOS"      value={totalCerrado}   color={C.blue}/>
-        <KPI label="SHOW_RATE"     value={`${showRate}%`} color={C.amber}/>
+      <div style={{ display:"grid",gridTemplateColumns:`repeat(${Math.min(5,1+byEstado.length)},1fr)`,gap:2,marginBottom:16 }}>
+        <KPI label="TOTAL_CALLS" value={totalCalls} color={C.white}/>
+        {byEstado.slice(0,4).map(e=>(
+          <KPI key={e.label} label={e.label.toUpperCase().replace(/ /g,"_")} value={e.count} color={C.green}/>
+        ))}
       </div>
 
-      {/* Filter bar — Airtable style */}
+      {/* Filter bar */}
       <div style={{ background:C.surface,border:`1px solid ${C.border}`,padding:"10px 16px",marginBottom:2,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" }}>
-        {/* Search */}
         <input
           value={search} onChange={e=>setSearch(e.target.value)}
-          placeholder="🔍  Buscar nombre, Instagram, closer..."
+          placeholder="Buscar nombre, Instagram, setter, origen..."
           style={{ fontFamily:C.mono,fontSize:9,background:C.card,color:C.white,border:`1px solid ${C.border}`,padding:"5px 12px",outline:"none",flex:"1",minWidth:200,letterSpacing:"0.04em" }}
         />
         <div style={{ width:1,height:20,background:C.border }}/>
-        {/* Dropdowns */}
         <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-          <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.1em" }}>STATUS</span>
-          <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={selStyle}>
-            {allStatuses.map(s=><option key={s} value={s}>{s}</option>)}
+          <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.1em" }}>ESTADO</span>
+          <select value={filterEstado} onChange={e=>setFilterEstado(e.target.value)} style={selStyle}>
+            {allEstados.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-          <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.1em" }}>CLOSER</span>
-          <select value={filterCloser} onChange={e=>setFilterCloser(e.target.value)} style={selStyle}>
-            {allClosers.map(s=><option key={s} value={s}>{s}</option>)}
+          <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.1em" }}>SETTER</span>
+          <select value={filterSetter} onChange={e=>setFilterSetter(e.target.value)} style={selStyle}>
+            {allSetters.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-          <span style={{ fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.1em" }}>PROGRAMA</span>
-          <select value={filterPrograma} onChange={e=>setFilterPrograma(e.target.value)} style={selStyle}>
-            {allProgramas.map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-        {(filterStatus!=="TODOS"||filterCloser!=="TODOS"||filterPrograma!=="TODOS"||search) && (
-          <button onClick={()=>{setFilterStatus("TODOS");setFilterCloser("TODOS");setFilterPrograma("TODOS");setSearch("");}}
+        {(filterEstado!=="TODOS"||filterSetter!=="TODOS"||search) && (
+          <button onClick={()=>{setFilterEstado("TODOS");setFilterSetter("TODOS");setSearch("");}}
             style={{ fontFamily:C.mono,fontSize:7,cursor:"pointer",padding:"5px 11px",background:C.redDim,color:C.red,border:`1px solid ${C.red}40`,letterSpacing:"0.08em" }}>
             ✕ LIMPIAR
           </button>
         )}
-        <span style={{ marginLeft:"auto",fontFamily:C.mono,fontSize:7,color:C.grey }}>{filtered.length} / {calls.length} REGISTROS</span>
+        <span style={{ marginLeft:"auto",fontFamily:C.mono,fontSize:7,color:C.grey }}>{filtered.length} / {totalCalls} REGISTROS</span>
       </div>
 
       {/* Grid */}
@@ -1223,14 +1215,13 @@ function TrackerCalls({ calls }) {
           <thead>
             <tr>
               {[
-                {col:"nombre",   label:"NOMBRE"},
-                {col:"fecha",    label:"FECHA"},
-                {col:"status",   label:"STATUS"},
-                {col:"resultado",label:"RESULTADO"},
-                {col:"closer",   label:"CLOSER"},
-                {col:"programa", label:"PROGRAMA"},
-                {col:"origen",   label:"ORIGEN"},
-                {col:"instagram",label:"INSTAGRAM"},
+                {col:"nombre",       label:"NOMBRE"},
+                {col:"fechaAgenda",  label:"F. AGENDA"},
+                {col:"fechaLlamada", label:"F. LLAMADA"},
+                {col:"estado",       label:"ESTADO"},
+                {col:"setter",       label:"SETTER"},
+                {col:"origen",       label:"ORIGEN"},
+                {col:"instagram",    label:"INSTAGRAM"},
               ].map(({col,label})=>(
                 <th key={col} style={thStyle(col)} onClick={()=>toggleSort(col)}>
                   {label}{sortCol===col ? (sortDir==="asc"?" ↑":" ↓") : ""}
@@ -1240,18 +1231,17 @@ function TrackerCalls({ calls }) {
           </thead>
           <tbody>
             {filtered.length===0 && (
-              <tr><td colSpan={8} style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"28px 14px",textAlign:"center" }}>SIN RESULTADOS</td></tr>
+              <tr><td colSpan={7} style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"28px 14px",textAlign:"center" }}>SIN RESULTADOS</td></tr>
             )}
             {filtered.map((c,i)=>{
-              const stColor = CALL_STATUS_COLORS[c.status]||C.grey;
+              const stColor = CALL_STATUS_COLORS[c.estado]||C.greenLight;
               return (
                 <tr key={c.id} style={{ borderBottom:`1px solid ${C.border}`,background:i%2===0?"transparent":C.surface+"80" }}>
                   <td style={{ fontFamily:C.mono,fontSize:10,color:C.white,padding:"10px 14px",fontWeight:700,whiteSpace:"nowrap" }}>{c.nombre||"—"}</td>
-                  <td style={{ fontFamily:C.mono,fontSize:8,color:C.grey,padding:"10px 14px",whiteSpace:"nowrap" }}>{c.fecha||"—"}</td>
-                  <td style={{ padding:"10px 14px" }}><Tag label={(c.status||"NUEVO").toUpperCase()} color={stColor}/></td>
-                  <td style={{ fontFamily:C.mono,fontSize:9,color:C.white,padding:"10px 14px" }}>{c.resultado||"—"}</td>
-                  <td style={{ fontFamily:C.mono,fontSize:9,color:C.blue,padding:"10px 14px",whiteSpace:"nowrap" }}>{c.closer||"—"}</td>
-                  <td style={{ padding:"10px 14px" }}>{c.programa ? <Tag label={c.programa.toUpperCase()} color={C.purple}/> : <span style={{ fontFamily:C.mono,fontSize:9,color:C.grey }}>—</span>}</td>
+                  <td style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"10px 14px",whiteSpace:"nowrap" }}>{fmtDateShort(c.fechaAgenda)}</td>
+                  <td style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"10px 14px",whiteSpace:"nowrap" }}>{fmtDateShort(c.fechaLlamada)}</td>
+                  <td style={{ padding:"10px 14px" }}><Tag label={(c.estado||"—").toUpperCase()} color={stColor}/></td>
+                  <td style={{ fontFamily:C.mono,fontSize:9,color:C.greenLight,padding:"10px 14px",whiteSpace:"nowrap" }}>{c.setter||"—"}</td>
                   <td style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"10px 14px" }}>{c.origen||"—"}</td>
                   <td style={{ fontFamily:C.mono,fontSize:9,color:C.grey,padding:"10px 14px" }}>{c.instagram?`@${c.instagram}`:"—"}</td>
                 </tr>
