@@ -290,6 +290,7 @@ function pick(f, ...keys) {
 }
 
 function mapAirtableTrackerCalls(records) {
+  if (records.length > 0) console.log("🔍 TrackerCalls campos:", Object.keys(records[0].fields), records[0].fields);
   return records.map(r => {
     const f = r.fields;
     // Probar nombres con y sin emoji — Airtable a veces incluye el emoji en el nombre del campo
