@@ -1571,8 +1571,7 @@ const NAV = [
   { id:"finanzas",     label:"REP. VENTAS",  code:"05" },
   { id:"pagos",        label:"PAGOS/CUOTAS", code:"06" },
   { id:"eods",         label:"EODs",         code:"07" },
-  { id:"content",      label:"CONTENIDO",    code:"08" },
-  { id:"reports",      label:"REPORTES_IA",  code:"09" },
+  { id:"reports",      label:"REPORTES_IA",  code:"08" },
 ];
 
 export default function App() {
@@ -1721,7 +1720,7 @@ export default function App() {
             const fClients = clients.filter(c=>byMes(c.startDate)&&(gPrograma==="TODOS"||mapPrograma(gPrograma)===c.offer));
             const fIntel   = intel.filter((_,i)=>fClients.some(c=>c.id===clients[i]?.id));
             const fGastos  = gastos.filter(g=>byMes(g.fecha));
-            const fCalls   = calls.filter(c=>byMes(c.fecha));
+            const fCalls   = calls; // TrackerCalls tiene su propio filtro de mes interno
             const fPagos   = pagos.filter(p=>byMes(p.fechaProxCuota)&&(gPrograma==="TODOS"||p.programa===gPrograma));
             const fEods    = eods.filter(e=>byMes(e.fecha));
             return (
@@ -1733,7 +1732,6 @@ export default function App() {
                 {section==="finanzas"     &&<Finanzas ventas={fVentas} gastos={fGastos}/>}
                 {section==="pagos"        &&<PagosCuotas pagos={fPagos}/>}
                 {section==="eods"         &&<EODs eods={fEods}/>}
-                {section==="content"      &&<ContentHub clients={fClients} intelligence={fIntel}/>}
                 {section==="reports"      &&<Reports clients={fClients} intelligence={fIntel}/>}
               </div>
             );
