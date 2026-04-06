@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 
 const C = {
-  void: "#070707", bg: "#0A0A0A", surface: "#0F0F0F", card: "#111111",
-  border: "#1C1C1C", borderHi: "#2A2A2A",
-  green: "#00E87A", greenDim: "#00E87A15", greenMid: "#00E87A40",
-  red: "#FF2D2D", redDim: "#FF2D2D15",
-  amber: "#FFB800", amberDim: "#FFB80015",
-  blue: "#00B8FF", blueDim: "#00B8FF15",
-  purple: "#A855F7", purpleDim: "#A855F715",
-  white: "#F0F0F0", grey: "#888888", greyMid: "#252525", textDim: "#555555",
+  // Fondos — Negro REIN y variantes
+  void: "#101010", bg: "#141414", surface: "#181818", card: "#1C1C1C",
+  border: "#212724", borderHi: "#3D4D43",
+  // Verde principal — paleta (RE)IN
+  green: "#5A6E54",     greenDim: "#5A6E5420", greenMid: "#5A6E5445",
+  greenLight: "#A3AE99",
+  // Funcionales — muted para mantener la estética
+  red: "#8B3A3A",       redDim: "#8B3A3A20",
+  amber: "#8B6914",     amberDim: "#8B691420",
+  blue: "#2A5C7A",      blueDim: "#2A5C7A20",
+  purple: "#5A4E78",    purpleDim: "#5A4E7820",
+  // Texto
+  white: "#FAFAFA", grey: "#9FA59C", greyMid: "#212724", textDim: "#5A6E54",
   mono: "'Space Mono','Courier New',monospace",
 };
 
