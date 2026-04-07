@@ -294,38 +294,55 @@ function fmtDateShort(val) {
   return val;
 }
 
-function pick(f, ...keys) {
-  for (const k of keys) {
-    const v = f[k];
-    if (v !== undefined && v !== null && v !== "") {
-      if (Array.isArray(v)) return v[0] || "";           // linked record / lookup
-      if (typeof v === "object" && v.name) return v.name; // collaborator field
+// Busca el campo por substring del nombre (ignora emojis prefix de Airtable)
+function pickFuzzy(f, ...names) {
+  const keys = Object.keys(f);
+  for (const name of names) {
+    // 1) Exact match
+    const exact = f[name];
+    if (exact !== undefined && exact !== null && exact !== "") {
+      if (Array.isArray(exact)) return exact[0] ?? "";
+      if (typeof exact === "object") return exact.name || exact.value || exact.text || "";
+      return exact;
+    }
+    // 2) Key that includes the name (handles emoji prefix)
+    const fuzzyKey = keys.find(k => k.includes(name));
+    if (fuzzyKey) {
+      const v = f[fuzzyKey];
+      if (v === undefined || v === null || v === "") continue;
+      if (Array.isArray(v)) return v[0] ?? "";
+      if (typeof v === "object") return v.name || v.value || v.text || "";
       return v;
     }
   }
   return "";
 }
 
-function str(v) { return v == null ? "" : String(v); }
+function str(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.length > 0 ? str(v[0]) : "";
+  if (typeof v === "object") return v.name || v.value || v.text || "";
+  const s = String(v);
+  return (s === "null" || s === "undefined") ? "" : s;
+}
 
 function mapAirtableTrackerCalls(records) {
   return records.map(r => {
     try {
       const f = r.fields;
-      const ig = str(pick(f, "📱 Instagram","Instagram","instagram","@instagram"));
+      const ig = str(pickFuzzy(f, "Instagram"));
       return {
-        id:           r.id,
-        nombre:       str(pick(f, "👤 Nombre","Nombre","Name")),
-        fechaAgenda:  str(pick(f, "📅 Fecha de Agenda","Fecha de Agenda","Fecha Agenda")),
-        agenda:       str(pick(f, "📍 Agenda","Agenda")),
-        leadScoring:  str(pick(f, "🤖 Lead Scoring","Lead Scoring")),
-        ingresos:     str(pick(f, "💰 Ingresos Mensuales","Ingresos Mensuales")),
-        meses:        str(pick(f, "📅 Meses","Meses")),
-        instagram:    ig.startsWith("@") ? ig.slice(1) : ig,
+        id:          r.id,
+        nombre:      str(pickFuzzy(f, "Nombre","Name")),
+        fechaAgenda: str(pickFuzzy(f, "Fecha de Agenda","Fecha Agenda")),
+        agenda:      str(pickFuzzy(f, "Agenda")),
+        ingresos:    str(pickFuzzy(f, "Ingresos Mensuales")),
+        meses:       str(pickFuzzy(f, "Meses")),
+        instagram:   ig.startsWith("@") ? ig.slice(1) : ig,
       };
     } catch(e) {
       console.warn("Error mapeando registro TrackerCalls:", r.id, e);
-      return { id: r.id, nombre:"", fechaAgenda:"", agenda:"", leadScoring:"", ingresos:"", meses:"", instagram:"" };
+      return { id:r.id, nombre:"", fechaAgenda:"", agenda:"", ingresos:"", meses:"", instagram:"" };
     }
   });
 }
