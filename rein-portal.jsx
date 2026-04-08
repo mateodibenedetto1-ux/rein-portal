@@ -1661,6 +1661,8 @@ export default function App() {
         fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.eods),        // Base 1
       ]);
       // Clientes desde base 1
+      console.log("CLIENTES fetch:", clientesR.status, clientesR.value?.length, clientesR.reason?.message);
+      if(clientesR.value?.length>0) console.log("CLIENTES campos:", Object.keys(clientesR.value[0].fields), clientesR.value[0].fields);
       if(clientesR.status==="fulfilled"&&clientesR.value.length>0){
         setClients(mapAirtableClients(clientesR.value));
         setIntel(mapAirtableIntel(clientesR.value));
