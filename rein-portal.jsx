@@ -195,39 +195,29 @@ function RevenueChart({ clients }) {
 // ── AIRTABLE HELPERS ─────────────────────────────────────────────────────────
 
 // Mapea el valor de "Programa" al formato del portal
-function mapPrograma(val) {
-  if (!val) return "B2C REIN";
-  const v = String(val).toUpperCase();
-  if (v.includes("B2B") && v.includes("ADVISORY")) return "B2B ADVISORY";
-  if (v.includes("B2B")) return "B2B REIN";
-  return "B2C REIN"; // RE(IN), REIN, etc. → B2C por defecto
-}
+function mapPrograma(val) { return val ? String(val) : ""; }
 
 // Usa Reporte de Venta como fuente principal de clientes
 function mapAirtableClients(records) {
-  if(records.length>0) console.log("CLIENTES campos:", Object.keys(records[0].fields));
   return records.map(r => {
     const f = r.fields;
-    const startDate = str(pickFuzzy(f, "Fecha de Inicio (Programa)","Fecha de Inicio en el programa","Fecha de Inicio","Fecha de cierre"));
-    const start = startDate ? new Date(startDate) : new Date();
-    const daysIn = Math.max(0, Math.floor((new Date() - start) / 86400000));
-    const planPago = str(pickFuzzy(f, "Plan de pago","Plan Pago"));
-    const cuotas = planPago==="PIF"||!planPago ? 1 : parseInt(planPago)||1;
+    const startDate = str(pickFuzzy(f, "Fecha de Inicio (Programa)","Fecha de Inicio en el programa","Fecha de Inicio"));
+    const start = startDate ? new Date(startDate) : null;
+    const daysIn = (start && !isNaN(start)) ? Math.max(0, Math.floor((new Date()-start)/86400000)) : 0;
     return {
       id:           r.id,
-      name:         str(pickFuzzy(f, "Nombre y Apellido","Nombre Cliente","Nombre")) || "Sin nombre",
-      company:      str(pickFuzzy(f, "Empresa","Company","Ubicación")),
-      offer:        mapPrograma(str(pickFuzzy(f, "Programa","Oferta","Program"))),
-      stage:        str(pickFuzzy(f, "Etapa","Stage","Estado")) || "ACTIVO",
+      name:         str(pickFuzzy(f, "Nombre y Apellido")) || "Sin nombre",
+      offer:        str(pickFuzzy(f, "Programa")),
+      stage:        str(pickFuzzy(f, "Etapa Cliente","Etapa","Estado")) || "ACTIVO",
       startDate,
-      revenue:      Number(pickFuzzy(f, "Total del Servicio","Revenue","Valor")||0),
-      cashCollected:Number(pickFuzzy(f, "Cash Collected","Cobrado")||0),
-      country:      str(pickFuzzy(f, "Ubicación","País","Country")),
+      country:      str(pickFuzzy(f, "Nacionalidad","País","Ubicación")),
       daysIn,
-      platform:     str(pickFuzzy(f, "Fuente de Conocimiento","Fuente","Plataforma","Platform")),
-      cuotas,
-      payMethod:    str(pickFuzzy(f, "Método de Pago","Metodo de Pago","Payment Method")),
-      brandOrigin:  str(pickFuzzy(f, "Fuente de Conocimiento","Fuente","Brand")),
+      revenue:      Number(pickFuzzy(f, "Monto Total (Facturación Alumno)","Cash Collected Alumno","Total del Servicio")||0),
+      cashCollected:Number(pickFuzzy(f, "Cash Collected Alumno","Cash Collected")||0),
+      platform:     str(pickFuzzy(f, "Fuente de Conocimiento","Fuente","Plataforma")),
+      payMethod:    str(pickFuzzy(f, "Tarjeta Cliente","Método de Pago")),
+      brandOrigin:  str(pickFuzzy(f, "Fuente de Conocimiento","Fuente")),
+      cuotas:       1,
     };
   });
 }
@@ -705,10 +695,11 @@ function ClientsBase({ clients }) {
   const [off,setOff]=useState("TODOS"); const [st,setSt]=useState("TODOS");
   const [q,setQ]=useState(""); const [sel,setSel]=useState(null);
 
+  const allOffers = ["TODOS", ...new Set(clients.map(c=>c.offer).filter(Boolean))].sort();
   const filtered = clients.filter(c=>
     (off==="TODOS"||c.offer===off)&&
     (st==="TODOS"||c.stage===st)&&
-    (!q||c.name?.toLowerCase().includes(q.toLowerCase())||c.company?.toLowerCase().includes(q.toLowerCase()))
+    (!q||c.name?.toLowerCase().includes(q.toLowerCase())||c.country?.toLowerCase().includes(q.toLowerCase()))
   );
 
   function FRow({ label,opts,val,onChange }) {
@@ -737,15 +728,15 @@ function ClientsBase({ clients }) {
         <input value={q} onChange={e=>setQ(e.target.value)} placeholder="BUSCAR // nombre o empresa..."
           style={{ width:"100%",background:C.surface,border:`1px solid ${C.border}`,padding:"9px 12px",fontSize:10,color:C.white,fontFamily:C.mono,outline:"none",boxSizing:"border-box",letterSpacing:"0.08em",marginBottom:8 }}
           onFocus={e=>e.target.style.borderColor=C.green} onBlur={e=>e.target.style.borderColor=C.border}/>
-        <FRow label="OFERTA" opts={OFFERS} val={off} onChange={setOff}/>
-        <FRow label="ETAPA" opts={STAGES} val={st} onChange={setSt}/>
+        <FRow label="PROGRAMA" opts={allOffers} val={off} onChange={setOff}/>
+        <FRow label="ETAPA" opts={["TODOS",...new Set(clients.map(c=>c.stage).filter(Boolean))]} val={st} onChange={setSt}/>
       </div>
 
       <div style={{ background:C.card,border:`1px solid ${C.border}`,overflow:"auto",marginBottom:2 }}>
         <table style={{ width:"100%",borderCollapse:"collapse",minWidth:700 }}>
           <thead>
             <tr style={{ borderBottom:`1px solid ${C.border}`,background:C.surface }}>
-              {["CLIENTE","EMPRESA","OFERTA","REVENUE","DÍAS_EN_PROG.","ESTADO"].map(h=>(
+              {["CLIENTE","PROGRAMA","FECHA_INICIO","UBICACIÓN","DÍAS_EN_PROG.","ESTADO"].map(h=>(
                 <th key={h} style={{ padding:"9px 14px",textAlign:"left",fontFamily:C.mono,fontSize:7,color:C.grey,letterSpacing:"0.18em",fontWeight:700,whiteSpace:"nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -758,12 +749,9 @@ function ClientsBase({ clients }) {
                 <tr key={c.id} onClick={()=>setSel(sel?.id===c.id?null:c)}
                   style={{ borderBottom:`1px solid ${C.border}`,cursor:"pointer",background:sel?.id===c.id?C.greenDim:"transparent",borderLeft:`2px solid ${sel?.id===c.id?C.green:"transparent"}`,transition:"all 0.12s" }}>
                   <td style={{ padding:"12px 14px",fontFamily:C.mono,fontSize:10,color:C.white,letterSpacing:"0.04em" }}>{c.name.toUpperCase()}</td>
-                  <td style={{ padding:"12px 14px",fontFamily:C.mono,fontSize:9,color:C.grey }}>{c.company.toUpperCase()}</td>
-                  <td style={{ padding:"12px 14px" }}><OfferTag offer={c.offer}/></td>
-                  <td style={{ padding:"12px 14px" }}>
-                    <div style={{ fontFamily:C.mono,fontSize:10,color:C.amber }}>${c.revenue?.toLocaleString()}</div>
-                    <div style={{ fontFamily:C.mono,fontSize:7,color:C.grey,marginTop:2 }}>CASH: ${c.cashCollected?.toLocaleString()}</div>
-                  </td>
+                  <td style={{ padding:"12px 14px" }}><Tag label={c.offer||"—"} color={C.green}/></td>
+                  <td style={{ padding:"12px 14px",fontFamily:C.mono,fontSize:9,color:C.grey,whiteSpace:"nowrap" }}>{fmtDateShort(c.startDate)||"—"}</td>
+                  <td style={{ padding:"12px 14px",fontFamily:C.mono,fontSize:9,color:C.grey }}>{c.country||"—"}</td>
                   <td style={{ padding:"12px 14px" }}>
                     <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:4 }}>
                       <span style={{ fontFamily:C.mono,fontSize:9,color:daysLeft<20?C.red:C.grey }}>{c.daysIn}D / 120D</span>
@@ -1553,9 +1541,9 @@ function EODs({ eods }) {
 }
 
 // ── GLOBAL FILTER BAR ────────────────────────────────────────────────────────
-function GlobalFilterBar({ ventas, gMes, setGMes, gPrograma, setGPrograma, onSync, syncing }) {
+function GlobalFilterBar({ ventas, clients, gMes, setGMes, gPrograma, setGPrograma, onSync, syncing }) {
   const allMeses     = getMeses(ventas, "fechaCierre");
-  const allProgramas = [...new Set(ventas.map(v=>v.programa).filter(Boolean))].sort();
+  const allProgramas = [...new Set(clients.map(c=>c.offer).filter(Boolean))].sort();
   const active       = gMes!=="TODOS" || gPrograma!=="TODOS";
 
   const sel = { fontFamily:C.mono, fontSize:9, background:C.surface, color:C.white, border:`1px solid ${C.border}`, padding:"5px 10px", cursor:"pointer", outline:"none", letterSpacing:"0.06em", minWidth:140 };
@@ -1752,7 +1740,7 @@ export default function App() {
         {/* Main */}
         <div style={{ marginLeft:188,flex:1,maxWidth:"calc(100vw - 188px)",background:C.void,display:"flex",flexDirection:"column",minHeight:"100vh" }}>
           <GlobalFilterBar
-            ventas={ventas} gMes={gMes} setGMes={setGMes}
+            ventas={ventas} clients={clients} gMes={gMes} setGMes={setGMes}
             gPrograma={gPrograma} setGPrograma={setGPrograma}
             onSync={()=>syncAirtable(airtableConfig)} syncing={syncing}
           />
@@ -1760,7 +1748,7 @@ export default function App() {
             const byMes  = x => gMes==="TODOS"     || toMonthKey(x)===gMes;
             const byProg = p => gPrograma==="TODOS" || p===gPrograma;
             const fVentas  = ventas.filter(v=>byMes(v.fechaCierre)&&byProg(v.programa));
-            const fClients = clients.filter(c=>byMes(c.startDate)&&(gPrograma==="TODOS"||mapPrograma(gPrograma)===c.offer));
+            const fClients = clients.filter(c=>byMes(c.startDate)&&(gPrograma==="TODOS"||c.offer===gPrograma));
             const fIntel   = intel.filter((_,i)=>fClients.some(c=>c.id===clients[i]?.id));
             const fGastos  = gastos.filter(g=>byMes(g.fecha));
             const fCalls   = calls; // TrackerCalls tiene su propio filtro de mes interno
