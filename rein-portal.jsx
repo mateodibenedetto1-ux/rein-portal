@@ -205,28 +205,29 @@ function mapPrograma(val) {
 
 // Usa Reporte de Venta como fuente principal de clientes
 function mapAirtableClients(records) {
+  if(records.length>0) console.log("CLIENTES campos:", Object.keys(records[0].fields));
   return records.map(r => {
     const f = r.fields;
-    const startDate = f["📅 Fecha de Inicio en el programa"] || f["📆 Fecha de cierre"] || "";
+    const startDate = str(pickFuzzy(f, "Fecha de Inicio (Programa)","Fecha de Inicio en el programa","Fecha de Inicio","Fecha de cierre"));
     const start = startDate ? new Date(startDate) : new Date();
     const daysIn = Math.max(0, Math.floor((new Date() - start) / 86400000));
-    const planPago = f["🧾 Plan de pago"] || "PIF";
-    const cuotas = planPago==="PIF"?1:parseInt(planPago)||1;
+    const planPago = str(pickFuzzy(f, "Plan de pago","Plan Pago"));
+    const cuotas = planPago==="PIF"||!planPago ? 1 : parseInt(planPago)||1;
     return {
       id:           r.id,
-      name:         f["👤 Nombre Cliente"] || "Sin nombre",
-      company:      f["🌏 Ubicación"] || "",
-      offer:        mapPrograma(f["📦 Programa"]),
-      stage:        "ACTIVO",
+      name:         str(pickFuzzy(f, "Nombre y Apellido","Nombre Cliente","Nombre")) || "Sin nombre",
+      company:      str(pickFuzzy(f, "Empresa","Company","Ubicación")),
+      offer:        mapPrograma(str(pickFuzzy(f, "Programa","Oferta","Program"))),
+      stage:        str(pickFuzzy(f, "Etapa","Stage","Estado")) || "ACTIVO",
       startDate,
-      revenue:      Number(f["💰 Total del Servicio"] || 0),
-      cashCollected:Number(f["💰Cash Collected"] || 0),
-      country:      f["🌏 Ubicación"] || "",
+      revenue:      Number(pickFuzzy(f, "Total del Servicio","Revenue","Valor")||0),
+      cashCollected:Number(pickFuzzy(f, "Cash Collected","Cobrado")||0),
+      country:      str(pickFuzzy(f, "Ubicación","País","Country")),
       daysIn,
-      platform:     f["🛜 Fuente de Conocimiento"] || "",
+      platform:     str(pickFuzzy(f, "Fuente de Conocimiento","Fuente","Plataforma","Platform")),
       cuotas,
-      payMethod:    f["💳 Método de Pago"] || "",
-      brandOrigin:  f["🛜 Fuente de Conocimiento"] || "",
+      payMethod:    str(pickFuzzy(f, "Método de Pago","Metodo de Pago","Payment Method")),
+      brandOrigin:  str(pickFuzzy(f, "Fuente de Conocimiento","Fuente","Brand")),
     };
   });
 }
