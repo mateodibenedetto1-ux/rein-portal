@@ -1659,11 +1659,6 @@ export default function App() {
         fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.gastos),
         fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.eods),
       ]);
-      // Debug: ver estado de cada fetch
-      console.log("SYNC ventas:",ventasR.status, ventasR.value?.length, ventasR.reason?.message);
-      console.log("SYNC tracker:",pipelineR.status, pipelineR.value?.length, pipelineR.reason?.message);
-      if(ventasR.value?.length>0) console.log("VENTAS sample fields:", Object.keys(ventasR.value[0].fields));
-
       // Reporte de Venta es la fuente principal de clientes
       if(ventasR.status==="fulfilled"&&ventasR.value.length>0){
         setClients(mapAirtableClients(ventasR.value));
