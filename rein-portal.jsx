@@ -1651,18 +1651,22 @@ export default function App() {
     if (!cfg) return;
     setSyncing(true); setSyncErr("");
     try {
-      const [pipelineR,ventasR,cuotasR,pagosR,gastosR,eodR] = await Promise.allSettled([
-        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.trackerCalls),
-        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.ventas),
-        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.cuotas),
-        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.pagos),
-        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.gastos),
-        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.eods),
+      const [clientesR,pipelineR,ventasR,cuotasR,pagosR,gastosR,eodR] = await Promise.allSettled([
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.clientes),   // Base 1
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.trackerCalls), // Base 1
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.ventas),      // Base 2
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.cuotas),      // Base 2
+        fetchAirtableTable(AIRTABLE_TOKEN2, AIRTABLE_BASE2, T.pagos),       // Base 2
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.gastos),      // Base 1
+        fetchAirtableTable(AIRTABLE_TOKEN,  AIRTABLE_BASE,  T.eods),        // Base 1
       ]);
-      // Reporte de Venta es la fuente principal de clientes
+      // Clientes desde base 1
+      if(clientesR.status==="fulfilled"&&clientesR.value.length>0){
+        setClients(mapAirtableClients(clientesR.value));
+        setIntel(mapAirtableIntel(clientesR.value));
+      }
+      // Ventas desde base 2 (solo para reportes financieros)
       if(ventasR.status==="fulfilled"&&ventasR.value.length>0){
-        setClients(mapAirtableClients(ventasR.value));
-        setIntel(mapAirtableIntel(ventasR.value));
         setVentas(mapAirtableVentas(ventasR.value));
       }
       if(pipelineR.status==="fulfilled") setCalls(mapAirtableTrackerCalls(pipelineR.value));
